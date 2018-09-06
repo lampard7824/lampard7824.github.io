@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Hotel Transylvania</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        label {
+            display:block;
+            margin-bottom:1rem;
+        }
+        label > span {
+            display:inline-block;
+            width: 5rem;
+        }
+        label > input {
+            padding: 0.25rem;
+        }
+        .hotel {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .room-container {
+            flex: none;
+            width: 15rem;
+            padding:1rem;
+        }
+        .room {
+            padding:1rem;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>Hotel Transylvania Booking</h1>
+        <label>
+            <span>Adults</span>
+            <input type="number" v-model.number="pax.adultCount" min="0">
+        </label>
+        <label>
+            <span>Children</span>
+            <input type="number" v-model.number="pax.childCount" min="0">
+        </label>
+        <label>
+            <span>Infants</span>
+            <input type="number" v-model.number="pax.infantCount" min="0">
+        </label>
+        <hr/>
+
+        <p style="color:red" v-if="validationMessage" v-text="validationMessage"></p>
+        <div class="hotel">
+            <div class="room-container" v-for="(room, roomIndex) in rooms" :key="roomIndex">
+                <div class="room">
+                    <strong v-text="'Room '+ (roomIndex+1)"></strong>
+                    <ol>
+                        <li v-for="(person, personIndex) in room" :key="personIndex" v-text="person"></li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.10/lodash.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+    <script>
+        window.vm = new Vue({
+            el: '#app',
+            data: {
+                validationMessage: null,
+                pax: {
+                    adultCount: 0,
+                    childCount: 0,
+                    infantCount: 0,
+                },
+                rooms: [],
+            },
+            computed: {
+                zeroizePax() {
+                    return _.mapValues(this.pax, cnt => cnt || 0)
+                },
+            },
+            watch: {
+                pax: {
+                    deep: true,
+                    handler() {
+                        this.assignRooms()
+                    }
+                }
+            },
+            methods: {
+                assignRooms() {
+                    this.rooms = []
+                    this.validationMessage = null
+                
+                    let { adultCount, childCount, infantCount } = this.zeroizePax
+                    
+                    if (adultCount + childCount > 7) {
+                        this.validationMessage = 'Maximum guest of 7 exceeded.'
+                        return
+                    }
+
+                    let childRoomCount = Math.ceil(childCount / 3),
+                        infantRoomCount = Math.ceil(infantCount / 3),
+                        minimumRoomsForUnsupervised = Math.max(childRoomCount, infantRoomCount)
+                
+                    
+                    if (adultCount < minimumRoomsForUnsupervised) {
+                        this.validationMessage = 'There are not enough adults to supervise children/infants.'
+                        return
+                    }
+                    let averageSupervisorsPerRoom = Math.floor(adultCount / minimumRoomsForUnsupervised),
+                        minimumSupervisorsPerRoom = Math.min(averageSupervisorsPerRoom, 3),
+                        remainingAdults = _.fill(Array(adultCount), 'A'),
+                        remainingChildren = _.fill(Array(childCount), 'C'),
+                        remainingInfants = _.fill(Array(infantCount), 'I')
+                    
+                    // fill up the rooms with children and infants and minimum supervising adults first
+                    while (remainingChildren.length || remainingInfants.length) {
+                        this.rooms.push([
+                            ...remainingAdults.splice(0, minimumSupervisorsPerRoom),
+                            ...remainingChildren.splice(0,3),
+                            ...remainingInfants.splice(0,3),
+                        ])
+                    }
+
+                    // if there are remaining adults, fill up the existing rooms first
+                    if (remainingAdults.length) {
+                        this.rooms.forEach(room => {
+                            let adultGuests = room.filter(guest => guest === 'A').length
+                            room.push(...remainingAdults.splice(0, 3 - adultGuests))
+                            room.sort()
+                        })
+                    }
+                    
+                    // if still have remaining adults, group them into groups of 3 and fill them up with new rooms 
+                    while (remainingAdults.length) {
+                        this.rooms.push([
+                            ...remainingAdults.splice(0, 3),
+                        ])
+                    }
+
+                    if (this.rooms.length > 3) {
+                        this.validationMessage = `Cannot book more than 3 rooms.`
+                        this.rooms = []
+                        return
+                    }
+                }
+            }
+        })
+    </script>
+
+</body>
+</html>
