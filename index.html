@@ -76,6 +76,11 @@
                     infantCount: 0,
                 },
                 rooms: [],
+                maximumRooms: 3,
+                maximumGuests: 7,
+                maximumAdultsPerRoom: 3,
+                maximumChildrenPerRoom: 3,
+                maximumInfantPerRoom: 3,
             },
             computed: {
                 zeroizePax() {
@@ -97,13 +102,13 @@
                 
                     let { adultCount, childCount, infantCount } = this.zeroizePax
                     
-                    if (adultCount + childCount > 7) {
-                        this.validationMessage = 'Maximum guest of 7 exceeded.'
+                    if (adultCount + childCount > this.maximumGuests) {
+                        this.validationMessage = `Maximum guest of ${this.maximumGuests} exceeded.`
                         return
                     }
 
-                    let childRoomCount = Math.ceil(childCount / 3),
-                        infantRoomCount = Math.ceil(infantCount / 3),
+                    let childRoomCount = Math.ceil(childCount / this.maximumChildrenPerRoom),
+                        infantRoomCount = Math.ceil(infantCount / this.maximumInfantsPerRoom),
                         minimumRoomsForUnsupervised = Math.max(childRoomCount, infantRoomCount)
                 
                     
@@ -112,7 +117,7 @@
                         return
                     }
                     let averageSupervisorsPerRoom = Math.floor(adultCount / minimumRoomsForUnsupervised),
-                        minimumSupervisorsPerRoom = Math.min(averageSupervisorsPerRoom, 3),
+                        minimumSupervisorsPerRoom = Math.min(averageSupervisorsPerRoom, this.maximumAdultsPerRoom),
                         remainingAdults = _.fill(Array(adultCount), 'A'),
                         remainingChildren = _.fill(Array(childCount), 'C'),
                         remainingInfants = _.fill(Array(infantCount), 'I')
@@ -121,8 +126,8 @@
                     while (remainingChildren.length || remainingInfants.length) {
                         this.rooms.push([
                             ...remainingAdults.splice(0, minimumSupervisorsPerRoom),
-                            ...remainingChildren.splice(0,3),
-                            ...remainingInfants.splice(0,3),
+                            ...remainingChildren.splice(0, this.maximumChildrenPerRoom),
+                            ...remainingInfants.splice(0, this.maximumInfantsPerRoom),
                         ])
                     }
 
@@ -130,7 +135,7 @@
                     if (remainingAdults.length) {
                         this.rooms.forEach(room => {
                             let adultGuests = room.filter(guest => guest === 'A').length
-                            room.push(...remainingAdults.splice(0, 3 - adultGuests))
+                            room.push(...remainingAdults.splice(0, this.maximumAdultsPerRoom - adultGuests))
                             room.sort()
                         })
                     }
@@ -138,12 +143,12 @@
                     // if still have remaining adults, group them into groups of 3 and fill them up with new rooms 
                     while (remainingAdults.length) {
                         this.rooms.push([
-                            ...remainingAdults.splice(0, 3),
+                            ...remainingAdults.splice(0, this.maximumAdultsPerRoom),
                         ])
                     }
 
-                    if (this.rooms.length > 3) {
-                        this.validationMessage = `Cannot book more than 3 rooms.`
+                    if (this.rooms.length > this.maximumRooms) {
+                        this.validationMessage = `Cannot book more than ${this.maximumRooms} rooms.`
                         this.rooms = []
                         return
                     }
